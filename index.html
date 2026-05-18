@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Market Pulse IE — Selarom Analytics</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --navy-dark:   #0a1628;
+      --navy-mid:    #0d1f4e;
+      --navy-card:   #112554;
+      --navy-hover:  #183070;
+      --blue-royal:  #1565C0;
+      --blue-bright: #2B84D8;
+      --blue-accent: #42A5F5;
+      --white:       #ffffff;
+      --white-75:    rgba(255,255,255,0.75);
+      --white-45:    rgba(255,255,255,0.45);
+      --white-12:    rgba(255,255,255,0.12);
+      --white-06:    rgba(255,255,255,0.06);
+      --border:      rgba(43,132,216,0.22);
+      --green:       #43A047;
+      --green-bg:    rgba(67,160,71,0.15);
+      --red:         #E53935;
+      --red-bg:      rgba(229,57,53,0.15);
+      --gold:        #FFB300;
+      --gold-bg:     rgba(255,179,0,0.15);
+    }
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--navy-dark); color: var(--white); min-height: 100vh; }
+
+    /* ── HEADER ── */
+    .header {
+      background: linear-gradient(135deg, #060e1f 0%, var(--navy-mid) 50%, #1a4a9e 100%);
+      border-bottom: 1px solid var(--border);
+      position: relative; overflow: hidden;
+    }
+    .header::before {
+      content: ''; position: absolute; inset: 0;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 28px 28px; pointer-events: none;
+    }
+    .header-inner {
+      position: relative; max-width: 1400px; margin: 0 auto;
+      padding: 16px 36px; display: flex; align-items: center; justify-content: space-between; gap: 20px;
+    }
+    .brand-name { font-size: 2rem; font-weight: 900; letter-spacing: 0.22em; line-height: 1; text-shadow: 0 2px 16px rgba(43,132,216,0.5); }
+    .brand-sub  { font-size: 0.65rem; font-weight: 600; letter-spacing: 0.38em; color: var(--blue-accent); text-transform: uppercase; margin-top: 2px; }
+    .brand-tag  { font-size: 0.7rem; color: var(--white-75); font-style: italic; margin-top: 1px; }
+    .header-center { text-align: center; }
+    .header-center h1 { font-size: 1.05rem; font-weight: 800; letter-spacing: 0.06em; }
+    .header-center p  { font-size: 0.7rem; color: var(--white-75); margin-top: 3px; }
+    .cta-header {
+      background: linear-gradient(135deg, var(--blue-royal), var(--blue-bright));
+      color: var(--white); border: none; padding: 11px 22px; border-radius: 6px;
+      font-size: 0.82rem; font-weight: 700; cursor: pointer; text-decoration: none;
+      display: inline-block; white-space: nowrap; box-shadow: 0 4px 16px rgba(21,101,192,0.4);
+      transition: all 0.2s;
+    }
+    .cta-header:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(21,101,192,0.6); }
+
+    /* ── INSIGHTS STRIP ── */
+    .insights-strip {
+      background: var(--navy-card); border-bottom: 1px solid var(--border);
+      padding: 14px 36px;
+    }
+    .insights-inner { max-width: 1400px; margin: 0 auto; }
+    .insights-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--blue-accent); margin-bottom: 10px; }
+    .insights-grid  { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .insight-card {
+      background: var(--white-06); border: 1px solid var(--border); border-radius: 8px;
+      padding: 12px 16px; display: flex; gap: 12px; align-items: flex-start;
+    }
+
+    .insight-title { font-size: 0.78rem; font-weight: 700; margin-bottom: 3px; }
+    .insight-body  { font-size: 0.7rem; color: var(--white-75); line-height: 1.5; }
+    .insight-body strong { color: var(--white); }
+
+    /* ── CITY TABS ── */
+    .tabs-bar {
+      background: var(--navy-mid); border-bottom: 1px solid var(--border);
+      padding: 0 36px; display: flex; align-items: stretch; justify-content: space-between;
+    }
+    .tabs-inner { display: flex; gap: 2px; }
+    .city-tab {
+      background: none; border: none; border-bottom: 3px solid transparent;
+      color: var(--white-45); padding: 12px 18px; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; transition: all 0.18s; white-space: nowrap;
+    }
+    .city-tab:hover { color: var(--white); background: var(--white-06); }
+    .city-tab.active { color: var(--white); border-bottom-color: var(--blue-bright); }
+    .tabs-meta { font-size: 0.65rem; color: var(--white-45); display: flex; align-items: center; }
+
+    /* ── MAIN ── */
+    .main { max-width: 1400px; margin: 0 auto; padding: 24px 36px; display: flex; flex-direction: column; gap: 20px; }
+
+    /* ── PANEL BASE ── */
+    .panel {
+      background: var(--navy-card); border: 1px solid var(--border);
+      border-radius: 10px; overflow: hidden;
+    }
+    .panel-header {
+      padding: 13px 18px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .panel-title { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--blue-accent); }
+    .panel-meta  { font-size: 0.65rem; color: var(--white-45); }
+
+    /* ── KPI CARDS (single city) ── */
+    .kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+    .kpi-card {
+      background: var(--navy-card); border: 1px solid var(--border); border-radius: 10px;
+      padding: 20px 18px; position: relative; overflow: hidden; transition: all 0.18s;
+    }
+    .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(43,132,216,0.18); border-color: var(--blue-bright); }
+    .kpi-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, var(--blue-royal), var(--blue-accent));
+    }
+    .kpi-label-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+    .kpi-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--blue-accent); }
+    .kpi-city  { font-size: 0.72rem; color: var(--white-45); margin-bottom: 4px; }
+    .kpi-value { font-size: 1.9rem; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; }
+    .kpi-badge {
+      display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 600;
+      padding: 3px 9px; border-radius: 12px; margin-top: 7px;
+    }
+    .pos { background: var(--green-bg); color: #66BB6A; }
+    .neg { background: var(--red-bg);   color: #EF5350; }
+    .neu { background: var(--gold-bg);  color: var(--gold); }
+    .kpi-source { font-size: 0.6rem; color: var(--white-45); margin-top: 10px; }
+    .kpi-note   { font-size: 0.67rem; color: var(--gold); margin-top: 6px; }
+
+    /* ── COMPARISON TABLE (all cities) ── */
+    .comp-table-wrap { overflow-x: auto; }
+    table.comp { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    table.comp th {
+      padding: 10px 16px; text-align: left; font-size: 0.62rem; font-weight: 700;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--blue-accent);
+      border-bottom: 1px solid var(--border); white-space: nowrap;
+    }
+    table.comp td { padding: 11px 16px; border-bottom: 1px solid var(--white-06); vertical-align: middle; }
+    table.comp tr:last-child td { border-bottom: none; }
+    table.comp tr:hover td { background: var(--white-06); }
+    .cell-city { font-weight: 700; font-size: 0.85rem; }
+    .cell-county { font-size: 0.65rem; color: var(--white-45); }
+    .cell-bar-wrap { display: flex; align-items: center; gap: 10px; }
+    .cell-bar-bg { flex: 1; background: var(--white-06); border-radius: 3px; height: 8px; min-width: 80px; }
+    .cell-bar    { height: 8px; border-radius: 3px; background: linear-gradient(90deg, var(--blue-royal), var(--blue-bright)); transition: width 0.4s; }
+    .cell-val    { font-weight: 700; white-space: nowrap; min-width: 80px; }
+    .rank-badge  { font-size: 0.65rem; font-weight: 700; padding: 2px 7px; border-radius: 10px; }
+    .rank-1 { background: rgba(255,179,0,0.2); color: var(--gold); }
+    .rank-2 { background: rgba(189,189,189,0.15); color: #bdbdbd; }
+    .rank-3 { background: rgba(255,255,255,0.08); color: var(--white-75); }
+    .leakage-chip { font-size: 0.72rem; font-weight: 600; padding: 3px 10px; border-radius: 10px; }
+    .chip-surplus { background: var(--red-bg); color: #EF5350; }
+    .chip-leakage { background: var(--green-bg); color: #66BB6A; }
+    .chip-pending { background: var(--gold-bg); color: var(--gold); }
+
+    /* ── MAP + CHART ROW ── */
+    .bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    #map { height: 380px; background: var(--navy-dark); }
+    .leaflet-tile { filter: brightness(0.7) saturate(0.5); }
+    .leaflet-container { background: #0a1628; }
+    .map-controls { padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .map-metric-select {
+      background: var(--navy-dark); border: 1px solid var(--border); color: var(--white);
+      padding: 5px 10px; border-radius: 5px; font-size: 0.72rem; cursor: pointer;
+    }
+    .map-legend-scale { display: flex; align-items: center; gap: 8px; font-size: 0.65rem; color: var(--white-45); }
+    .legend-gradient { width: 80px; height: 8px; border-radius: 4px; }
+    .chart-inner { padding: 16px 16px 10px; }
+    #trendChart { max-height: 320px; }
+
+    /* ── CTA BANNER ── */
+    .cta-banner {
+      background: linear-gradient(135deg, #0f2060, var(--blue-royal));
+      border: 1px solid var(--blue-bright); border-radius: 10px;
+      padding: 28px 36px; display: flex; align-items: center; justify-content: space-between; gap: 24px;
+    }
+    .cta-banner h3 { font-size: 1.2rem; font-weight: 800; margin-bottom: 5px; }
+    .cta-banner p  { font-size: 0.82rem; color: var(--white-75); max-width: 560px; line-height: 1.6; }
+    .cta-btn {
+      background: var(--white); color: var(--navy-mid); border: none; padding: 14px 30px;
+      border-radius: 6px; font-size: 0.88rem; font-weight: 800; cursor: pointer;
+      text-decoration: none; display: inline-block; white-space: nowrap; transition: all 0.2s;
+    }
+    .cta-btn:hover { background: var(--blue-accent); color: var(--white); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+
+    /* ── FOOTER ── */
+    .footer { background: #060e1f; border-top: 1px solid var(--border); padding: 18px 36px; font-size: 0.62rem; color: var(--white-45); text-align: center; line-height: 2; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 1000px) {
+      .bottom-row { grid-template-columns: 1fr; }
+      .insights-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 780px) {
+      .kpi-grid { grid-template-columns: repeat(2,1fr); }
+      .header-inner { flex-direction: column; gap: 12px; text-align: center; }
+      .main { padding: 16px; }
+      .tabs-bar { padding: 0 16px; overflow-x: auto; }
+      .insights-strip { padding: 14px 16px; }
+      .cta-banner { flex-direction: column; text-align: center; }
+    }
+    @media (max-width: 500px) {
+      .kpi-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ HEADER ══════════════════════════════════════════════════════════ -->
+<header class="header">
+  <div class="header-inner">
+    <div>
+      <div class="brand-name">SELAROM</div>
+      <div class="brand-sub">Analytics</div>
+      <div class="brand-tag">From Data to Direction</div>
+    </div>
+    <div class="header-center">
+      <h1>Market Pulse IE</h1>
+      <p>Inland Empire SMB Market Health Dashboard · 5 Cities · 4 Key Metrics</p>
+    </div>
+    <a href="mailto:chrismorales8794@gmail.com?subject=Full Market Analysis Request — Market Pulse IE" class="cta-header">
+      Request a Full Market Analysis
+    </a>
+  </div>
+</header>
+
+<!-- ══ KEY INSIGHTS ═════════════════════════════════════════════════════ -->
+<div class="insights-strip">
+  <div class="insights-inner">
+    <div class="insights-label">Key Insights</div>
+    <div class="insights-grid">
+      <div class="insight-card">
+        <div>
+          <div class="insight-title">Perris: Fastest-Growing, Least Saturated</div>
+          <div class="insight-body">Leading population growth at <strong>+0.60% YoY</strong> with the lowest business density in the cohort. Strong first-mover opportunity for food, daily services, and neighborhood retail.</div>
+        </div>
+      </div>
+      <div class="insight-card">
+        <div>
+          <div class="insight-title">Corona: Highest Consumer Spending Power</div>
+          <div class="insight-body">Median household income of <strong>$106,438, which is 16% above California's average.</strong> The strongest market for premium services, specialty retail, and higher price-point businesses.</div>
+        </div>
+      </div>
+      <div class="insight-card">
+        <div>
+          <div class="insight-title">All 5 Cities Are Regional Retail Anchors</div>
+          <div class="insight-body">Every city draws more shoppers than its local population alone would generate. <strong>Moreno Valley is the most balanced</strong> (-28.4) and has the most room for new locally-focused businesses.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CITY TABS ════════════════════════════════════════════════════════ -->
+<div class="tabs-bar">
+  <div class="tabs-inner" id="cityTabs">
+    <button class="city-tab active" onclick="selectCity('all')">All Cities</button>
+    <button class="city-tab" onclick="selectCity('Perris')">Perris</button>
+    <button class="city-tab" onclick="selectCity('Moreno Valley')">Moreno Valley</button>
+    <button class="city-tab" onclick="selectCity('San Bernardino')">San Bernardino</button>
+    <button class="city-tab" onclick="selectCity('Riverside')">Riverside</button>
+    <button class="city-tab" onclick="selectCity('Corona')">Corona</button>
+  </div>
+  <div class="tabs-meta">ACS 2019–2023 &nbsp;·&nbsp; CA DOF 2023 &nbsp;·&nbsp; BLS QCEW</div>
+</div>
+
+<!-- ══ MAIN ═════════════════════════════════════════════════════════════ -->
+<main class="main">
+
+  <!-- TOP SECTION: KPI cards or comparison table -->
+  <div id="topSection"></div>
+
+  <!-- BOTTOM ROW: Map + Trend chart -->
+  <div class="bottom-row">
+
+    <!-- MAP -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">City Map</span>
+        <select class="map-metric-select" id="mapMetric" onchange="updateMap()">
+          <option value="mhi">Color by: Median HH Income</option>
+          <option value="pop">Color by: Population</option>
+          <option value="biz">Color by: New Businesses</option>
+          <option value="leakage">Color by: Retail Leakage Index</option>
+        </select>
+      </div>
+      <div id="map"></div>
+      <div class="map-controls" id="mapControls">
+        <div class="map-legend-scale">
+          <span id="legendLow">Low</span>
+          <div class="legend-gradient" id="legendGrad"></div>
+          <span id="legendHigh">High</span>
+        </div>
+        <div style="font-size:0.62rem;color:var(--white-45)">Click a city for details</div>
+      </div>
+    </div>
+
+    <!-- TREND CHART -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Population Trend 2020–2023</span>
+        <span class="panel-meta">Source: CA Dept of Finance</span>
+      </div>
+      <div class="chart-inner">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CTA BANNER -->
+  <div class="cta-banner">
+    <div>
+      <h3>Actionable analytics built for local businesses.</h3>
+      <p>Selarom Analytics transforms geographic and market data into practical insights, helping Inland Empire businesses evaluate performance, identify opportunities, and support strategic decision-making.</p>
+    </div>
+    <a href="mailto:chrismorales8794@gmail.com?subject=Full Market Analysis Request — Market Pulse IE" class="cta-btn">
+      Request a Full Market Analysis →
+    </a>
+  </div>
+
+</main>
+
+<!-- ══ FOOTER ════════════════════════════════════════════════════════════ -->
+<footer class="footer">
+  <strong style="color:var(--white-75)">Selarom Analytics · Market Pulse IE · Inland Empire SMB Market Health Dashboard</strong><br>
+  Data Sources: U.S. Census Bureau ACS 5-Year Estimates (2019–2023) &nbsp;·&nbsp; California Department of Finance, Population Estimates (2023)
+  &nbsp;·&nbsp; BLS Quarterly Census of Employment & Wages (county-level proxy) &nbsp;·&nbsp; CA Department of Tax & Fee Administration (CDTFA), Taxable Sales by City (2023)<br>
+  Business registration figures represent county-level BLS QCEW establishment growth, allocated by city population share.
+  Retail Leakage Index uses ESRI-style formula: (Local Demand − CDTFA Retail Supply) / (Demand + Supply) × 100. Demand estimated from ACS households × MHI × BLS consumer expenditure ratio (22%).<br>
+  This dashboard is for informational purposes. Selarom Analytics recommends a custom market analysis before major business decisions.<br>
+  © 2026 Selarom Analytics · All rights reserved
+</footer>
+
+<!-- ══ SCRIPT ════════════════════════════════════════════════════════════ -->
+<script>
+// ─────────────────────────────────────────────────────────────
+// CITY DATA
+// ─────────────────────────────────────────────────────────────
+const CITIES = [
+  {
+    name: 'Perris', county: 'Riverside', lat: 33.7826, lng: -117.2286,
+    mhi: 82523, mhiVsState: -10,
+    pop: { 2020: 78614, 2021: 78867, 2022: 78474, 2023: 78948 }, popGrowthYoy: 0.60,
+    bizNetNew: 95, bizGrowthPct: 3.5,
+    leakageScore: -57.7, leakageStatus: 'SURPLUS',
+    summary: 'Highest YoY population growth in the cohort. Strong retail draw with supply at 3.7x local demand. First-mover opportunity for neighborhood services targeting new residents.',
+  },
+  {
+    name: 'Moreno Valley', county: 'Riverside', lat: 33.9425, lng: -117.2297,
+    mhi: 93222, mhiVsState: 2,
+    pop: { 2020: 208237, 2021: 208387, 2022: 208302, 2023: 208289 }, popGrowthYoy: -0.01,
+    bizNetNew: 248, bizGrowthPct: 3.5,
+    leakageScore: -28.4, leakageStatus: 'SURPLUS',
+    summary: 'Most balanced retail market in the cohort, with the least over-served retail environment relative to local demand. Stable, large population with income above CA median.',
+  },
+  {
+    name: 'San Bernardino', county: 'San Bernardino', lat: 34.1083, lng: -117.2898,
+    mhi: 63988, mhiVsState: -30,
+    pop: { 2020: 222101, 2021: 221800, 2022: 221200, 2023: 222101 }, popGrowthYoy: 0.41,
+    bizNetNew: 250, bizGrowthPct: 3.2,
+    leakageScore: -55.7, leakageStatus: 'SURPLUS',
+    summary: 'Largest affordable market. Strong regional retail hub with high volume. Best for value-oriented, high-frequency businesses.',
+  },
+  {
+    name: 'Riverside', county: 'Riverside', lat: 33.9533, lng: -117.3962,
+    mhi: 91045, mhiVsState: -1,
+    pop: { 2020: 316307, 2021: 309598, 2022: 314818, 2023: 313676 }, popGrowthYoy: -0.36,
+    bizNetNew: 374, bizGrowthPct: 3.5,
+    leakageScore: -42.8, leakageStatus: 'SURPLUS',
+    summary: 'Regional retail hub drawing shoppers from surrounding cities. High traffic, established competition. Strongest total business activity of the 5 cities.',
+  },
+  {
+    name: 'Corona', county: 'Riverside', lat: 33.8753, lng: -117.5664,
+    mhi: 106438, mhiVsState: 16,
+    pop: { 2020: 156637, 2021: 157182, 2022: 157139, 2023: 157005 }, popGrowthYoy: -0.09,
+    bizNetNew: 187, bizGrowthPct: 3.5,
+    leakageScore: -41.2, leakageStatus: 'SURPLUS',
+    summary: 'Highest household income in the cohort at 16% above the CA median. Best market for premium services, specialty retail, and higher price-point businesses.',
+  },
+];
+
+const STATE_MHI = 91551;
+const METRIC_DEFS = {
+  mhi: {
+    label: 'Median Household Income',
+    tip: 'The midpoint income across all households in this city. Higher means locals have more spending power for your products or services. California state median: $91,551.',
+    fmt: v => '$' + v.toLocaleString(),
+    colors: ['#90CAF9', '#0D47A1'],
+  },
+  pop: {
+    label: 'Population 2023',
+    tip: 'Total residents in the city as of 2023. Larger population = larger potential customer base.',
+    fmt: v => v.toLocaleString(),
+    colors: ['#80CBC4', '#004D40'],
+  },
+  biz: {
+    label: 'Est. New Businesses (YoY)',
+    tip: 'Estimated net new businesses opened in 2023 vs. 2022, based on county-level BLS employment data allocated by city population share.',
+    fmt: v => '+' + v.toLocaleString(),
+    colors: ['#A5D6A7', '#1B5E20'],
+  },
+  leakage: {
+    label: 'Retail Leakage Index',
+    tip: 'Measures whether residents shop locally or go elsewhere. Negative = SURPLUS (city draws outside shoppers — strong retail anchor). Positive = LEAKAGE (unmet local demand — opportunity for new businesses). Source: CDTFA 2023.',
+    fmt: v => (v >= 0 ? '+' : '') + v.toFixed(1),
+    colors: ['#EF9A9A', '#B71C1C'],  // deeper red = stronger surplus draw
+  },
+};
+
+// ─────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────
+const fmt$ = v => '$' + v.toLocaleString();
+const fmtN = v => v.toLocaleString();
+const fmtPct = v => (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function hexToRgb(h) {
+  return [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)];
+}
+function lerpColor(c1, c2, t) {
+  const [r1,g1,b1] = hexToRgb(c1), [r2,g2,b2] = hexToRgb(c2);
+  return '#' + [lerp(r1,r2,t), lerp(g1,g2,t), lerp(b1,b2,t)].map(v => Math.round(v).toString(16).padStart(2,'0')).join('');
+}
+
+// ─────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────
+let activeCity = null;
+let mapInstance = null;
+let mapMarkers = {};
+let trendChart = null;
+
+// ─────────────────────────────────────────────────────────────
+// CITY SELECTION
+// ─────────────────────────────────────────────────────────────
+function selectCity(name) {
+  activeCity = name === 'all' ? null : name;
+  document.querySelectorAll('.city-tab').forEach(t => {
+    const match = (name === 'all' && t.textContent === 'All Cities') || t.textContent === name;
+    t.classList.toggle('active', match);
+  });
+  renderTopSection();
+  updateTrendHighlight();
+  if (activeCity && mapInstance) {
+    const c = CITIES.find(x => x.name === activeCity);
+    if (c) mapInstance.setView([c.lat, c.lng], 12, { animate: true });
+    Object.entries(mapMarkers).forEach(([n, m]) => {
+      m.setStyle({ weight: n === activeCity ? 3 : 1.5, opacity: n === activeCity ? 1 : 0.6, fillOpacity: n === activeCity ? 0.9 : 0.55 });
+    });
+  } else if (mapInstance) {
+    mapInstance.setView([33.95, -117.35], 10, { animate: true });
+    Object.values(mapMarkers).forEach(m => m.setStyle({ weight: 1.5, opacity: 0.85, fillOpacity: 0.78 }));
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// TOP SECTION: KPI cards (single city) or comparison (all)
+// ─────────────────────────────────────────────────────────────
+function renderTopSection() {
+  const el = document.getElementById('topSection');
+  el.innerHTML = activeCity ? renderKPICards() : renderComparison();
+}
+
+function tipHtml(key) { return ''; }
+
+function renderKPICards() {
+  const c = CITIES.find(x => x.name === activeCity);
+  const households = Math.round(c.pop[2023] / 3.2);
+
+  return `<div class="kpi-grid">
+
+    <div class="kpi-card">
+      <div class="kpi-label-row">
+        <span class="kpi-label">Median HH Income</span>${tipHtml('mhi')}
+      </div>
+      <div class="kpi-city">${c.name}</div>
+      <div class="kpi-value">${fmt$(c.mhi)}</div>
+      <span class="kpi-badge ${c.mhiVsState >= 0 ? 'pos' : 'neg'}">
+        ${c.mhiVsState >= 0 ? '▲' : '▼'} ${Math.abs(c.mhiVsState)}% vs. CA median ($${STATE_MHI.toLocaleString()})
+      </span>
+      <div class="kpi-source">U.S. Census ACS 5-Year 2019–2023</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-label-row">
+        <span class="kpi-label">Population Growth (YoY)</span>${tipHtml('pop')}
+      </div>
+      <div class="kpi-city">${c.name}</div>
+      <div class="kpi-value">${fmtPct(c.popGrowthYoy)}</div>
+      <span class="kpi-badge ${c.popGrowthYoy > 0 ? 'pos' : c.popGrowthYoy < -0.2 ? 'neg' : 'neu'}">
+        ${c.popGrowthYoy > 0 ? 'Growing' : c.popGrowthYoy < -0.1 ? 'Declining' : 'Stable'} · ${fmtN(c.pop[2023])} residents
+      </span>
+      <div class="kpi-source">CA Dept of Finance, Annual Estimates 2023</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-label-row">
+        <span class="kpi-label">Est. New Businesses</span>${tipHtml('biz')}
+      </div>
+      <div class="kpi-city">${c.name}</div>
+      <div class="kpi-value">+${fmtN(c.bizNetNew)}</div>
+      <span class="kpi-badge pos">▲ +${c.bizGrowthPct}% business growth in 2023</span>
+      <div class="kpi-source">BLS QCEW · ${c.county} County (population-share proxy)</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-label-row">
+        <span class="kpi-label">Retail Sales Leakage</span>
+      </div>
+      <div class="kpi-city">${c.name}</div>
+      ${c.leakageScore !== null
+        ? `<div class="kpi-value">${c.leakageScore > 0 ? '+' : ''}${c.leakageScore}</div>
+           <span class="kpi-badge ${c.leakageScore > 10 ? 'pos' : c.leakageScore < -10 ? 'neg' : 'neu'}">
+             ${c.leakageScore < -10 ? 'SURPLUS: city draws outside shoppers' : c.leakageScore > 10 ? 'LEAKAGE: unmet local demand' : 'Balanced market'}
+           </span>`
+        : `<div class="kpi-value" style="font-size:1.15rem;color:var(--gold);margin-top:4px">Analysis in progress</div>
+           <span class="kpi-badge neu" style="margin-top:8px">Retail analysis being finalized</span>`
+      }
+      <div class="kpi-source">Methodology: ACS consumer demand vs. CDTFA taxable sales</div>
+    </div>
+
+  </div>`;
+}
+
+function renderComparison() {
+  // Rank cities by each metric
+  const byMHI = [...CITIES].sort((a,b) => b.mhi - a.mhi);
+  const byPop = [...CITIES].sort((a,b) => b.pop[2023] - a.pop[2023]);
+  const byBiz = [...CITIES].sort((a,b) => b.bizNetNew - a.bizNetNew);
+  const maxMHI = Math.max(...CITIES.map(c=>c.mhi));
+  const maxPop = Math.max(...CITIES.map(c=>c.pop[2023]));
+  const maxBiz = Math.max(...CITIES.map(c=>c.bizNetNew));
+
+  const mhiRankOf  = n => byMHI.findIndex(c=>c.name===n)+1;
+  const popRankOf  = n => byPop.findIndex(c=>c.name===n)+1;
+  const bizRankOf  = n => byBiz.findIndex(c=>c.name===n)+1;
+
+  const rankBadge = r => {
+    if (r === 1) return `<span class="rank-badge rank-1">#1</span>`;
+    if (r === 2) return `<span class="rank-badge rank-2">#2</span>`;
+    if (r === 3) return `<span class="rank-badge rank-3">#3</span>`;
+    return `<span class="rank-badge" style="color:var(--white-45);">#${r}</span>`;
+  };
+
+  const bar = (val, max) =>
+    `<div class="cell-bar-wrap">
+      <div class="cell-bar-bg"><div class="cell-bar" style="width:${Math.round(val/max*100)}%"></div></div>
+    </div>`;
+
+  const leakageChip = c => {
+    if (c.leakageScore === null) return `<span class="leakage-chip chip-pending">In Progress</span>`;
+    if (c.leakageScore < -10) return `<span class="leakage-chip chip-surplus">SURPLUS ${c.leakageScore}</span>`;
+    return `<span class="leakage-chip chip-leakage">LEAKAGE +${c.leakageScore}</span>`;
+  };
+
+  const rows = CITIES.map(c => `
+    <tr>
+      <td>
+        <div class="cell-city" onclick="selectCity('${c.name}')" style="cursor:pointer;color:var(--blue-accent)">${c.name}</div>
+        <div class="cell-county">${c.county} Co.</div>
+      </td>
+      <td>
+        ${bar(c.mhi, maxMHI)}
+        <div class="cell-val">${fmt$(c.mhi)} ${rankBadge(mhiRankOf(c.name))}</div>
+        <div style="font-size:0.63rem;color:${c.mhiVsState>=0?'#66BB6A':'#EF5350'}">
+          ${c.mhiVsState>=0?'▲':'▼'} ${Math.abs(c.mhiVsState)}% vs CA
+        </div>
+      </td>
+      <td>
+        ${bar(c.pop[2023], maxPop)}
+        <div class="cell-val">${fmtN(c.pop[2023])} ${rankBadge(popRankOf(c.name))}</div>
+        <div style="font-size:0.63rem;color:${c.popGrowthYoy>0?'#66BB6A':'#EF5350'}">${fmtPct(c.popGrowthYoy)} YoY</div>
+      </td>
+      <td>
+        ${bar(c.bizNetNew, maxBiz)}
+        <div class="cell-val">+${fmtN(c.bizNetNew)} ${rankBadge(bizRankOf(c.name))}</div>
+        <div style="font-size:0.63rem;color:#66BB6A">+${c.bizGrowthPct}% growth</div>
+      </td>
+      <td>${leakageChip(c)}</td>
+      <td style="font-size:0.7rem;color:var(--white-75);max-width:200px;line-height:1.45">${c.summary}</td>
+    </tr>
+  `).join('');
+
+  return `<div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">City Comparison: All 5 IE Cities</span>
+      <span class="panel-meta">Click a city name to deep-dive</span>
+    </div>
+    <div class="comp-table-wrap">
+      <table class="comp">
+        <thead>
+          <tr>
+            <th>City</th>
+            <th>
+              Median HH Income
+            </th>
+            <th>Population</th>
+            <th>Est. New Businesses</th>
+            <th>Leakage Index</th>
+            <th>Market Snapshot</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// MAP
+// ─────────────────────────────────────────────────────────────
+function getMetricValue(city, metric) {
+  if (metric === 'mhi') return city.mhi;
+  if (metric === 'pop') return city.pop[2023];
+  if (metric === 'leakage') return city.leakageScore !== null ? city.leakageScore : 0;
+  return city.bizNetNew;
+}
+
+function initMap() {
+  mapInstance = L.map('map', { center: [33.95, -117.35], zoom: 10, zoomControl: true, attributionControl: false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(mapInstance);
+  CITIES.forEach(city => {
+    const radius = Math.max(14, Math.min(30, city.pop[2023] / 11000));
+    const marker = L.circleMarker([city.lat, city.lng], {
+      radius, fillColor: '#1565C0', color: '#ffffff', weight: 1.5, opacity: 0.85, fillOpacity: 0.78,
+    }).addTo(mapInstance);
+
+    marker.bindTooltip(`<strong>${city.name}</strong><br>${fmtN(city.pop[2023])} residents`, {
+      permanent: true, direction: 'top', className: 'leaflet-tooltip-city',
+      offset: [0, -radius - 2],
+    });
+
+    marker.bindPopup(`
+      <div style="font-family:Segoe UI,sans-serif;min-width:210px;">
+        <div style="font-size:1rem;font-weight:800;margin-bottom:2px">${city.name}</div>
+        <div style="font-size:0.72rem;color:#777;margin-bottom:10px">${city.county} County</div>
+        <table style="font-size:0.78rem;width:100%;border-collapse:collapse;">
+          <tr><td style="padding:3px 0;color:#555">Median HH Income</td><td style="text-align:right;font-weight:700">${fmt$(city.mhi)}</td></tr>
+          <tr><td style="padding:3px 0;color:#555">Population (2023)</td><td style="text-align:right;font-weight:700">${fmtN(city.pop[2023])}</td></tr>
+          <tr><td style="padding:3px 0;color:#555">Pop Growth YoY</td><td style="text-align:right;font-weight:700">${fmtPct(city.popGrowthYoy)}</td></tr>
+          <tr><td style="padding:3px 0;color:#555">Est. New Businesses</td><td style="text-align:right;font-weight:700">+${fmtN(city.bizNetNew)}</td></tr>
+          <tr><td style="padding:3px 0;color:#555">Leakage Index</td><td style="text-align:right;font-weight:700">${city.leakageScore !== null ? city.leakageScore : 'In Progress'}</td></tr>
+        </table>
+        <div style="margin-top:10px;font-size:0.7rem;color:#555;border-top:1px solid #eee;padding-top:8px">${city.summary}</div>
+      </div>
+    `, { maxWidth: 260 });
+    mapMarkers[city.name] = marker;
+  });
+  updateMap();
+}
+
+function updateMap() {
+  const metric = document.getElementById('mapMetric').value;
+  const def = METRIC_DEFS[metric];
+  const values = CITIES.map(c => getMetricValue(c, metric));
+  const min = Math.min(...values), max = Math.max(...values);
+
+  CITIES.forEach((city, i) => {
+    const t = (values[i] - min) / (max - min || 1);
+    const color = lerpColor(def.colors[0], def.colors[1], t);
+    mapMarkers[city.name].setStyle({ fillColor: color });
+  });
+
+  // Update legend
+  document.getElementById('legendGrad').style.background =
+    `linear-gradient(90deg, ${def.colors[0]}, ${def.colors[1]})`;
+  document.getElementById('legendLow').textContent  = def.fmt(min);
+  document.getElementById('legendHigh').textContent = def.fmt(max);
+}
+
+// ─────────────────────────────────────────────────────────────
+// TREND CHART
+// ─────────────────────────────────────────────────────────────
+// One color per city — distinct but cohesive on dark navy
+// Perris=blue(brand), Moreno Valley=cyan, San Bernardino=amber, Riverside=green, Corona=violet
+const PALETTE = ['#42A5F5', '#26C6DA', '#FFA726', '#66BB6A', '#AB47BC'];
+
+function initTrendChart() {
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  const years = [2020, 2021, 2022, 2023];
+  const labels = years.map(String);
+
+  // Normalize to index: 2020 = 100 so growth/decline is visible across all cities
+  // Raw population numbers span 78k–316k; year-over-year changes are only ~300–3k
+  // which are invisible against that scale. Index view solves this.
+  trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: CITIES.map((city, i) => {
+        const base = city.pop[2020];
+        return {
+          label: city.name,
+          data: years.map(yr => parseFloat(((city.pop[yr] / base) * 100).toFixed(2))),
+          rawPop: years.map(yr => city.pop[yr]),
+          borderColor: PALETTE[i],
+          backgroundColor: PALETTE[i] + '15',
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          tension: 0.3,
+          fill: false,
+        };
+      })
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: 'rgba(255,255,255,0.7)', font: { size: 11 }, boxWidth: 14, padding: 12 } },
+        tooltip: {
+          backgroundColor: '#112554', titleColor: '#fff', bodyColor: 'rgba(255,255,255,0.8)',
+          borderColor: '#2B84D8', borderWidth: 1,
+          callbacks: {
+            label: function(ctx) {
+              const raw = ctx.dataset.rawPop[ctx.dataIndex];
+              const idx = ctx.parsed.y.toFixed(1);
+              const sign = ctx.parsed.y >= 100 ? '+' : '';
+              return ` ${ctx.dataset.label}: ${fmtN(raw)} (${sign}${(ctx.parsed.y - 100).toFixed(1)}% vs 2020)`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { ticks: { color: 'rgba(255,255,255,0.55)' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+        y: {
+          ticks: {
+            color: 'rgba(255,255,255,0.55)',
+            callback: v => (v >= 100 ? '+' : '') + (v - 100).toFixed(1) + '%'
+          },
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          title: { display: true, text: '% Change from 2020', color: 'rgba(255,255,255,0.4)', font: { size: 10 } }
+        },
+      }
+    }
+  });
+}
+
+function updateTrendHighlight() {
+  if (!trendChart) return;
+  trendChart.data.datasets.forEach((ds, i) => {
+    const isSelected = !activeCity || CITIES[i].name === activeCity;
+    ds.borderWidth  = isSelected ? 3 : 1;
+    ds.borderColor  = isSelected ? PALETTE[i] : PALETTE[i] + '40';
+    ds.pointRadius  = isSelected ? 5 : 2;
+    ds.borderDash   = isSelected ? [] : [4, 3];
+  });
+  trendChart.update();
+}
+
+// ─────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  renderTopSection();
+  initMap();
+  initTrendChart();
+});
+</script>
+
+<style>
+/* Leaflet tooltip label override */
+.leaflet-tooltip-city {
+  background: rgba(13,31,78,0.92) !important;
+  border: 1px solid rgba(43,132,216,0.5) !important;
+  color: #fff !important;
+  font-size: 0.7rem !important;
+  font-weight: 600 !important;
+  padding: 3px 8px !important;
+  border-radius: 4px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4) !important;
+  white-space: nowrap !important;
+}
+.leaflet-tooltip-city::before { display: none !important; }
+</style>
+</body>
+</html>
